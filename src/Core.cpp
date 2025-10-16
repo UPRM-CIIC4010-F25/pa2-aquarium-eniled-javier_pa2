@@ -2,7 +2,10 @@
 
 
 // Creature Inherited Base Behavior
-void Creature::setBounds(int w, int h) { m_width = w; m_height = h; }
+void Creature::setBounds(int w, int h) { 
+    m_maxX = w; 
+    m_maxY = h; 
+}
 void Creature::normalize() {
     float length = std::sqrt(m_dx * m_dx + m_dy * m_dy);
     if (length != 0) {
@@ -13,6 +16,22 @@ void Creature::normalize() {
 
 void Creature::bounce() {
     // should implement boundary controls here
+    //parameters of left or right wall
+    if(m_x < 0) {
+        m_x = 0;
+        m_dx = fabs(m_dx); // makes it bounce to the right
+    } else if(m_x > m_maxX) {
+        m_x = m_maxX;
+        m_dx = -fabs(m_dx);// makes it bounce to the left
+    }
+    //parameters of top to bottom
+    if(m_y < 0) {
+        m_y = 0;
+        m_dy = fabs(m_dy); // makes it bounce down
+    } else if(m_y > m_maxY) {
+        m_y = m_maxY;
+        m_dy = -fabs(m_dy);// makes it bounce up
+    }
 }
 
 
@@ -48,7 +67,15 @@ void GameEvent::print() const {
 
 // collision detection between two creatures
 bool checkCollision(std::shared_ptr<Creature> a, std::shared_ptr<Creature> b) {
-    return false; 
+  if(!a || !b) {
+        return false;
+    }
+
+    float dx = a->getX() - b->getX();
+    float dy = a->getY() - b->getY();
+    float distanceSqrt = dx * dx + dy * dy;
+    float radiusSum = a->getCollisionRadius() + b->getCollisionRadius();
+    return distanceSqrt <= radiusSum * radiusSum;
 };
 
 

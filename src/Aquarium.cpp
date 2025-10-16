@@ -271,6 +271,11 @@ std::shared_ptr<GameEvent> DetectAquariumCollisions(std::shared_ptr<Aquarium> aq
     }
     return nullptr;
 };
+// functin so the npc as a minor reverse direction when collide
+void NPCreature::reverseDirection() {
+    m_dx = -m_dx;
+    m_dy = -m_dy;
+}
 
 //  Imlementation of the AquariumScene
 
@@ -285,6 +290,12 @@ void AquariumGameScene::Update(){
             ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
             if(event->creatureB != nullptr){
                 event->print();
+                auto npc = std::dynamic_pointer_cast<NPCreature>(event->creatureB);
+                if(npc) { // make npc bounce back
+                    npc->reverseDirection();
+                }
+                // Player also bounces away
+                this->m_player->setDirection(-this->m_player->getDx(), -this->m_player->getDy());
                 if(this->m_player->getPower() < event->creatureB->getValue()){
                     ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
                     this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps

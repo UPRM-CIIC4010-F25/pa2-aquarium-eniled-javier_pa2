@@ -76,6 +76,8 @@ protected:
     float m_collisionRadius = 0.0f;
     int m_value = 0;
     std::shared_ptr<GameSprite> m_sprite;
+    float m_maxX = 0.0f;
+    float m_maxY = 0.0f;
 
 public:
     virtual ~Creature() = default;

@@ -67,7 +67,7 @@ public:
     void loseLife(int debounce);
     void increasePower(int value) { m_power += value; }
     void reduceDamageDebounce();
-    
+
 private:
     int m_score = 0;
     int m_lives = 3;
@@ -81,6 +81,7 @@ public:
     AquariumCreatureType GetType() {return this->m_creatureType;}
     void move() override;
     void draw() const override;
+    void reverseDirection();
 protected:
     AquariumCreatureType m_creatureType;
 
