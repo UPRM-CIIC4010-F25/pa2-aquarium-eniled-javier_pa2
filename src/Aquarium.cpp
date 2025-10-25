@@ -8,6 +8,8 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
+        case AquariumCreatureType::PowerUp:
+            return "PowerUp";
         default:
             return "UknownFish";
     }
@@ -38,6 +40,14 @@ void PlayerCreature::reduceDamageDebounce() {
 
 void PlayerCreature::update() {
     this->reduceDamageDebounce();
+    //checks if speedBoost is active 
+    if (m_speedBoostTimer > 0) {
+        --m_speedBoostTimer; //subtract one from the timer in every frame 
+        if (m_speedBoostTimer == 0) { // Reset speed after boost stops
+            m_speed = std::max(1, m_speed - 2);
+            ofLogNotice() << "Speed boost ended. Speed reset to " << m_speed;
+        }
+    }
     this->move();
 }
 
@@ -65,6 +75,14 @@ void PlayerCreature::loseLife(int debounce) {
         m_damage_debounce = debounce; // Set debounce frames
         ofLogNotice() << "Player lost a life! Lives remaining: " << m_lives << std::endl;
     }
+
+    //If fish loses a life the power-up will be canceled to make it cleaner 
+    if (m_speedBoostTimer > 0) {
+            m_speedBoostTimer = 0; // stops the timer
+            m_speed = std::max(1, m_speed - 2); // revert speed boost making it go back to normal 
+            ofLogNotice() << "Power-Up canceled due to life loss. Speed reset to " << m_speed;
+    }
+
     // If in debounce period, do nothing
     if (m_damage_debounce > 0) {
         ofLogVerbose() << "Player is in damage debounce period. Frames left: " << m_damage_debounce << std::endl;
@@ -131,6 +149,18 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
+//PowerUp implementation 
+PowerUpSpeed::PowerUpSpeed(float x, float y) : Creature(x, y, 0, 0.0f, 0, nullptr) {
+    setCollisionRadius(40); 
+}
+void PowerUpSpeed::move() {}
+
+// draws the power up as a simple red circle
+void PowerUpSpeed::draw() const {
+    ofSetColor(ofColor::red);
+    ofDrawCircle(m_x, m_y, 10);
+    ofSetColor(ofColor::white);
+}
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
@@ -170,8 +200,22 @@ void Aquarium::addAquariumLevel(std::shared_ptr<AquariumLevel> level){
 }
 
 void Aquarium::update() {
+    bool hasPowerUp = false; // initial condition for to know if player has the powerup
     for (auto& creature : m_creatures) {
         creature->move();
+        //spawn the power-up so it would exist one at a time 
+        if(std::dynamic_pointer_cast<PowerUpSpeed>(creature)) {
+            hasPowerUp = true;
+            break;
+        }
+    }
+    static int frameCounter;
+    frameCounter++;
+
+    // Occasionally spawn a power-up in every few seconds (aprox every 6-7 seconds per frame) 
+    // and only if the power-Up doesn't exists yet
+    if (!hasPowerUp && frameCounter % 400 == 0 && rand() % 2 == 0) {
+        this->SpawnCreature(AquariumCreatureType::PowerUp);
     }
     this->Repopulate();
 }
@@ -218,6 +262,9 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
+            break;
+        case AquariumCreatureType::PowerUp:
+            this->addCreature(std::make_shared<PowerUpSpeed>(x, y));
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
@@ -288,6 +335,18 @@ void AquariumGameScene::Update(){
         event = DetectAquariumCollisions(this->m_aquarium, this->m_player);
         if (event != nullptr && event->isCollisionEvent()) {
             ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
+            // Handle PowerUp collection
+            auto powerUp = std::dynamic_pointer_cast<PowerUpSpeed>(event->creatureB);
+            if (powerUp) {
+                ofLogNotice() << "Player collected a PowerUpSpeed! Temporary speed boost activated." << std::endl;
+                // Temporary speed boost
+                this->m_player->changeSpeed(this->m_player->getSpeed() + 2);
+                this->m_player->m_speedBoostTimer = 300; // the speed would last 5 seconds
+                // Permanent power boost that makes the player stronger
+                this->m_player->increasePower(2);
+                this->m_aquarium->removeCreature(event->creatureB);
+                return;
+            }
             if(event->creatureB != nullptr){
                 event->print();
                 auto npc = std::dynamic_pointer_cast<NPCreature>(event->creatureB);

@@ -9,7 +9,8 @@
 
 enum class AquariumCreatureType {
     NPCreature,
-    BiggerFish
+    BiggerFish,
+    PowerUp
 };
 
 string AquariumCreatureTypeToString(AquariumCreatureType t);
@@ -62,6 +63,7 @@ public:
     int getScore()const { return m_score; }
     int getLives() const { return m_lives; }
     int getPower() const { return m_power; }
+    int m_speedBoostTimer = 0; // variable for the timer 
     
     void addToScore(int amount, int weight=1) { m_score += amount * weight; }
     void loseLife(int debounce);
@@ -94,6 +96,13 @@ public:
     void draw() const override;
 };
 
+//class for the speed power-Up
+class PowerUpSpeed : public Creature {
+public:
+    PowerUpSpeed(float x, float y);
+    void move() override;
+    void draw() const override;
+};
 
 class AquariumSpriteManager {
     public:
