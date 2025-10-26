@@ -1,4 +1,4 @@
 .vscode/*.db*
 obj
 bin/Acuarium*
-.DS_Store
+.DS_Store*.code-workspace
