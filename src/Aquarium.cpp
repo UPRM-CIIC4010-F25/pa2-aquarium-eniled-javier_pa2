@@ -8,10 +8,8 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
-        case AquariumCreatureType::PowerUp:
-            return "PowerUp";
         default:
-            return "UknownFish";
+            return "UnknownFish";
     }
 }
 
@@ -92,8 +90,8 @@ void PlayerCreature::loseLife(int debounce) {
 // NPCreature Implementation
 NPCreature::NPCreature(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
 : Creature(x, y, speed, 30, 1, sprite) {
-    m_dx = (rand() % 3 - 1); // -1, 0, or 1
-    m_dy = (rand() % 3 - 1); // -1, 0, or 1
+    m_dx = (rand() % 3 - 1); 
+    m_dy = (rand() % 3 - 1); 
     normalize();
 
     m_creatureType = AquariumCreatureType::NPCreature;
@@ -149,23 +147,13 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
-//PowerUp implementation 
-PowerUpSpeed::PowerUpSpeed(float x, float y) : Creature(x, y, 0, 0.0f, 0, nullptr) {
-    setCollisionRadius(40); 
-}
-void PowerUpSpeed::move() {}
-
-// draws the power up as a simple red circle
-void PowerUpSpeed::draw() const {
-    ofSetColor(ofColor::red);
-    ofDrawCircle(m_x, m_y, 10);
-    ofSetColor(ofColor::white);
-}
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
     this->m_npc_fish = std::make_shared<GameSprite>("base-fish.png", 70,70);
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
+    this->m_zaggy_fish = std::make_shared<GameSprite>("zaggy-fish.png", 80,80);
+    this->m_slowfish = std::make_shared<GameSprite>("slowfish.png", 100, 120);
 }
 
 std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureType t){
@@ -175,6 +163,11 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
             
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
+        case AquariumCreatureType::ZaggyFish:
+            return std::make_shared<GameSprite>(*this->m_zaggy_fish);
+            
+        case AquariumCreatureType::Slowfish:
+            return std::make_shared<GameSprite>(*this->m_slowfish);
         default:
             return nullptr;
     }
@@ -262,9 +255,6 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
-            break;
-        case AquariumCreatureType::PowerUp:
-            this->addCreature(std::make_shared<PowerUpSpeed>(x, y));
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
