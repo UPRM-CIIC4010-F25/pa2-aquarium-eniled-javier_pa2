@@ -8,6 +8,12 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
+        case AquariumCreatureType::ZaggyFish:
+            return "ZaggyFish";
+        case AquariumCreatureType::Slowfish:
+            return "SlowFish";
+        case AquariumCreatureType::PowerUp:
+            return "PowerUp";
         default:
             return "UnknownFish";
     }
@@ -147,6 +153,64 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
+//Zaggy fish's logic implementation
+ZaggyFish::ZaggyFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite) : NPCreature(x, y, speed, sprite) {
+    setCollisionRadius(40);
+    m_value = 4;
+    m_creatureType = AquariumCreatureType::ZaggyFish;
+}
+//movement implementation
+void ZaggyFish::move() {
+    m_x += m_dx * m_speed;
+    m_y += sin(ofGetElapsedTimef() * 5) * 10; // applies zig-zag movement
+    if(m_dx < 0) {
+        m_sprite->setFlipped(true);
+    } else {
+        m_sprite->setFlipped(false);
+    }
+    bounce();
+}
+void ZaggyFish::draw() const {
+    if(m_sprite) {
+        this->m_sprite->draw(this->m_x, this->m_y);
+    }
+}
+
+//Slow fish's logic implementation
+Slowfish::Slowfish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite) : NPCreature(x, y, speed, sprite) {
+    setCollisionRadius(50);
+    m_value = 6;
+    m_creatureType = AquariumCreatureType::Slowfish;
+}
+//Movement Implementation
+void Slowfish::move() {
+    m_x += m_dx * (m_speed * 0.25); // Moves slower than the other fish
+    m_y += m_dy * (m_speed * 0.25) + sin(ofGetElapsedTimef() * 2) * 2; //small vertical drift 
+    if(m_dx < 0 ){
+        this->m_sprite->setFlipped(true);
+    }else {
+        this->m_sprite->setFlipped(false);
+    }
+    bounce();
+}
+void Slowfish::draw() const {
+    if(m_sprite) {
+        this->m_sprite->draw(this->m_x, this->m_y);
+    }
+}
+
+//PowerUp implementation 
+PowerUpSpeed::PowerUpSpeed(float x, float y) : Creature(x, y, 0, 0.0f, 0, nullptr) {
+    setCollisionRadius(40); 
+}
+void PowerUpSpeed::move() {}
+
+// draws the power up as a simple red circle
+void PowerUpSpeed::draw() const {
+    ofSetColor(ofColor::red);
+    ofDrawCircle(m_x, m_y, 10);
+    ofSetColor(ofColor::white);
+}
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
@@ -202,12 +266,12 @@ void Aquarium::update() {
             break;
         }
     }
-    static int frameCounter;
+    static int frameCounter = 0;
     frameCounter++;
 
-    // Occasionally spawn a power-up in every few seconds (aprox every 6-7 seconds per frame) 
+    // Occasionally spawn a power-up in every few seconds (aprox every 4 seconds per frame) 
     // and only if the power-Up doesn't exists yet
-    if (!hasPowerUp && frameCounter % 400 == 0 && rand() % 2 == 0) {
+    if (!hasPowerUp && frameCounter % 240 == 0) {
         this->SpawnCreature(AquariumCreatureType::PowerUp);
     }
     this->Repopulate();
@@ -245,8 +309,8 @@ std::shared_ptr<Creature> Aquarium::getCreatureAt(int index) {
 
 
 void Aquarium::SpawnCreature(AquariumCreatureType type) {
-    int x = rand() % this->getWidth();
-    int y = rand() % this->getHeight();
+    int x = 20 + rand() % (this->getWidth() - 40);
+    int y = 20 + rand() % (this->getHeight() - 40);
     int speed = 1 + rand() % 25; // Speed between 1 and 25
 
     switch (type) {
@@ -255,6 +319,15 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
+            break;
+        case AquariumCreatureType::ZaggyFish:
+            this->addCreature(std::make_shared<ZaggyFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::ZaggyFish)));
+            break;
+        case AquariumCreatureType::Slowfish:
+            this->addCreature(std::make_shared<Slowfish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::Slowfish)));
+            break;
+        case AquariumCreatureType::PowerUp:
+            this->addCreature(std::make_shared<PowerUpSpeed>(x, y));
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
@@ -333,7 +406,7 @@ void AquariumGameScene::Update(){
                 this->m_player->changeSpeed(this->m_player->getSpeed() + 2);
                 this->m_player->m_speedBoostTimer = 300; // the speed would last 5 seconds
                 // Permanent power boost that makes the player stronger
-                this->m_player->increasePower(2);
+                this->m_player->increasePower(1);
                 this->m_aquarium->removeCreature(event->creatureB);
                 return;
             }
@@ -454,6 +527,35 @@ std::vector<AquariumCreatureType> Level_1::Repopulate() {
 }
 
 std::vector<AquariumCreatureType> Level_2::Repopulate() {
+    std::vector<AquariumCreatureType> toRepopulate;
+    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
+        int delta = node->population - node->currentPopulation;
+        if(delta >0){
+            for(int i=0; i<delta; i++){
+                toRepopulate.push_back(node->creatureType);
+            }
+            node->currentPopulation += delta;
+        }
+    }
+    return toRepopulate;
+}
+
+//New levels
+std::vector<AquariumCreatureType> Level_3::Repopulate() {
+    std::vector<AquariumCreatureType> toRepopulate;
+    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
+        int delta = node->population - node->currentPopulation;
+        if(delta >0){
+            for(int i=0; i<delta; i++){
+                toRepopulate.push_back(node->creatureType);
+            }
+            node->currentPopulation += delta;
+        }
+    }
+    return toRepopulate;
+}
+
+std::vector<AquariumCreatureType> Level_4::Repopulate() {
     std::vector<AquariumCreatureType> toRepopulate;
     for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
         int delta = node->population - node->currentPopulation;
