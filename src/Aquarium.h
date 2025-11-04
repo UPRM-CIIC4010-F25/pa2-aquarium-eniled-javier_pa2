@@ -8,11 +8,14 @@
 #include "Core.h"
 
 
+class BossAttackPower;
+
 enum class AquariumCreatureType {
     NPCreature,
     BiggerFish,
     ZaggyFish, //new fish
     Slowfish, //new fish
+    BossFish, //New boss fish
     PowerUp
 };
 
@@ -40,10 +43,19 @@ class AquariumLevel : public GameLevel {
         void populationReset();
         void levelReset(){m_level_score=0;this->populationReset();}
         virtual std::vector<AquariumCreatureType> Repopulate();
+
+        void setBackGSprite(std::shared_ptr<GameSprite> sprite) { m_background_sprite = sprite; }
+        std::shared_ptr<GameSprite> getBackGSprite() const {return m_background_sprite; }
+        void drawBackG() {
+            if(m_background_sprite) {
+                m_background_sprite->draw(0, 0);
+            }
+        }
     protected:
         std::vector<std::shared_ptr<AquariumLevelPopulationNode>> m_levelPopulation;
         int m_level_score;
         int m_targetScore;
+        std::shared_ptr<GameSprite> m_background_sprite; //new background for boss level
 
 };
 
@@ -72,6 +84,8 @@ public:
     void loseLife(int debounce);
     void increasePower(int value) { m_power += value; }
     void reduceDamageDebounce();
+    // Returns true if the player is still in damage debounce frames
+    bool isDamageDebounce() const { return m_damage_debounce > 0;}
 
 private:
     int m_score = 0;
@@ -115,6 +129,51 @@ public:
     void draw() const override;
 };
 
+//Inheritance class for the boss fish
+class BossFish : public NPCreature {
+    private: 
+        int health;
+        float coolDownAttack; //cools down in between attacks in seconds
+        float lastAttackTime; // time that passes since last attack
+        std::vector<std::shared_ptr<BossAttackPower>> m_Attacks_Circles;
+        std::shared_ptr<PlayerCreature> m_player; // pass reference of player to store in boss fish class
+        bool m_isRemoved = false;
+        bool m_hasGivenScore = false;
+    public:
+        BossFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite);
+
+        void SetPlayer(std::shared_ptr<PlayerCreature> player) { m_player = player; }
+        std::shared_ptr<PlayerCreature> GetPlayer() const { return m_player; }
+        int m_targetScore = 40;  // default value for target score
+
+        void move() override;
+        void draw() const override;
+        void update(float dt, bool& playerDied); //updates the attack timer and moves the boss
+        void shootAttack();
+
+        bool IsRemoved() const { return m_isRemoved; }
+        void SetRemoved(bool removed) { m_isRemoved = removed; }
+        int getHealth() const { return health; }
+        std::vector<std::shared_ptr<BossAttackPower>>& getAttackPower() { return m_Attacks_Circles; }
+};
+
+//class for the boss attack Power 
+class BossAttackPower : public Creature {
+    private:
+        ofColor m_ofColor;
+        float radius;
+        bool m_delete_attack = false;
+    public :
+        BossAttackPower(float x, float y, float dx, float dy, float radius, ofColor color);
+        void move() override;
+        void update();
+        void draw() const override;
+
+        float getRadius() const { return radius; }
+        void DeleteAttack() { m_delete_attack = true; }
+        bool isAttackDelete() const { return m_delete_attack; }
+};
+
 //class for the speed power-Up
 class PowerUpSpeed : public Creature {
 public:
@@ -133,6 +192,7 @@ class AquariumSpriteManager {
         std::shared_ptr<GameSprite> m_big_fish;
         std::shared_ptr<GameSprite> m_zaggy_fish;
         std::shared_ptr<GameSprite> m_slowfish;
+        std::shared_ptr<GameSprite> m_boss_fish;
 };
 
 
@@ -143,18 +203,21 @@ public:
     void addAquariumLevel(std::shared_ptr<AquariumLevel> level);
     void removeCreature(std::shared_ptr<Creature> creature);
     void clearCreatures();
-    void update();
+    void update(bool moveCreatures = true);
     void draw() const;
     void setBounds(int w, int h) { m_width = w; m_height = h; }
     void setMaxPopulation(int n) { m_maxPopulation = n; }
     void Repopulate();
-    void SpawnCreature(AquariumCreatureType type);
+    void SpawnCreature(AquariumCreatureType type, std::shared_ptr<PlayerCreature> player = nullptr);
     
     std::shared_ptr<Creature> getCreatureAt(int index);
     int getCreatureCount() const { return m_creatures.size(); }
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
 
+    //getters for the current level and the aquarium levels
+    int getCurrentLevelI() const { return currentLevel; }
+    const std::vector<std::shared_ptr<AquariumLevel>>& getAquariumLevels() const { return m_aquariumlevels; }
 
 private:
     int m_maxPopulation = 0;
@@ -182,6 +245,7 @@ class AquariumGameScene : public GameScene {
         string GetName()override {return this->m_name;}
         void Update() override;
         void Draw() override;
+        bool m_isBossSpawned = false;
     private:
         void paintAquariumHUD();
         std::shared_ptr<PlayerCreature> m_player;
@@ -233,4 +297,19 @@ class Level_4 : public AquariumLevel {
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::ZaggyFish, 4));
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::Slowfish, 3));
         };
+};
+
+//Boss Level
+class Level_Boss : public AquariumLevel {
+    public:
+        Level_Boss(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore) {
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 20));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::Slowfish, 2));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BossFish, 1));
+
+            //sets the boss level background
+            auto bossBackG = std::make_shared<GameSprite>("backgroundBoss.png", ofGetWidth(), ofGetHeight());
+            this->setBackGSprite(bossBackG);
+
+        }
 };

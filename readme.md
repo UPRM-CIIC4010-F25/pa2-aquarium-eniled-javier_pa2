@@ -24,8 +24,8 @@ Grading
 ## Team Info
 | Student Number | Student Name | Student Email |
 |-|-|-|
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
+| 802-22-5910| Eniled M. Ortiz Martinez| eniled.ortiz@upr.edu |
+|(STUDENT NUMBER HERE)| Javier Linares | javier.linares@upr.edu |
 
 ---
 
@@ -37,3 +37,5 @@ If a partner has no commits in the repositories, they will receive a 0.
 
 # Student Notes
 If you have any bonus specs, bonus or any details the TA's should know, you should include it here:
+
+Bonus - Boss Level: Created a chaotic boss level that spawns a boss and distorts the environment and acts as a "final part" to the game.
