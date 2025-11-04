@@ -38,4 +38,4 @@ If a partner has no commits in the repositories, they will receive a 0.
 # Student Notes
 If you have any bonus specs, bonus or any details the TA's should know, you should include it here:
 
-Bonus - Boss Level: Created a chaotic boss level that spawns a boss and distorts the environment and acts as a "final part" to the game.
+Bonus - Boss Level: Created a chaotic boss level that spawns a boss and distorts the environment and acts as a "final part" to the game. Logic can be found primarly within the Aquarium.cpp file starting from the 250+ line.
